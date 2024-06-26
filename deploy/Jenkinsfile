@@ -1,0 +1,32 @@
+pipeline{
+    agent any
+
+    stages {
+        stage('checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('init') {
+            steps {
+                sh 'cd ${WORKSPACE}/terraform/ && pwd && curl -o terraform.zip https://releases.hashicorp.com/terraform/1.0.11/terraform_1.0.11_linux_amd64.zip && unzip terraform.zip && ./terraform --version'
+                sh "cd ${WORKSPACE}/terraform && ./terraform init"
+            }
+        }
+        stage('terraform deploy') {
+            steps {
+                withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+                   sh "cd ${WORKSPACE}/terraform && ./terraform plan"
+                   sh "cd ${WORKSPACE}/terraform && ./terraform apply -auto-approve"
+                }
+            }
+
+        }
+    }
+    
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
